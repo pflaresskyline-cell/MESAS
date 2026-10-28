@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Reserva & Gestão de Mesas - Safari do Dudu</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Supabase Client -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --safari-green: #2d5a27;
+            --safari-light-green: #486b36;
+            --safari-sand: #f8f9fa;
+            --safari-gold: #d4a373;
+        }
+
+        body {
+            background-color: #f0f2f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 40px;
+        }
+
+        .header-title {
+            background: linear-gradient(135deg, var(--safari-green), var(--safari-light-green));
+            color: white;
+            padding: 10px;
+            border-bottom: 4px solid var(--safari-gold);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+
+        .stat-card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 6px 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            border-left: 3px solid var(--safari-green);
+        }
+
+        .stat-number {
+            font-size: clamp(1rem, 3.5vw, 1.4rem);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .stat-label {
+            font-size: clamp(0.55rem, 2vw, 0.75rem);
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .map-container {
+            background: #ffffff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+
+        .area-decoracao {
+            background: #e8f5e9;
+            border: 2px dashed #4caf50;
+            border-radius: 8px;
+            padding: 4px 2px;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #2e7d32;
+            font-size: clamp(0.55rem, 2vw, 0.85rem);
+            text-align: center;
+        }
+
+        .area-kids {
+            background: #fff3e0;
+            border: 2px dashed #ff9800;
+            border-radius: 6px;
+            padding: 4px;
+            text-align: center;
+            font-weight: bold;
+            color: #e65100;
+            font-size: clamp(0.55rem, 2vw, 0.85rem);
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .grade-divisoria {
+            border-top: 2px dashed #b0bec5;
+            position: relative;
+            margin: 12px 0;
+            text-align: center;
+        }
+
+        .grade-divisoria span {
+            background: white;
+            padding: 0 6px;
+            position: relative;
+            top: -9px;
+            font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+            color: #78909c;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        /* Tamanho Responsivo Exato das Bolinhas */
+        .table-card {
+            background: #ffffff;
+            border: 2px solid #ced4da;
+            border-radius: 50%;
+            width: clamp(52px, 16vw, 92px);
+            height: clamp(52px, 16vw, 92px);
+            margin: auto;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            position: relative;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+            padding: 1px;
+        }
+
+        .table-card:active {
+            transform: scale(0.95);
+        }
+
+        .table-card.livre {
+            border-color: #198754;
+            color: #198754;
+            background-color: #f8fff9;
+        }
+
+        .table-card.parcial {
+            border-color: #ffc107;
+            color: #856404;
+            background-color: #fffdf0;
+        }
+
+        .table-card.lotada {
+            border-color: #dc3545;
+            color: #842029;
+            background-color: #f8d7da;
+        }
+
+        .table-card.completa {
+            border-color: #198754;
+            color: #146c43;
+            background-color: #d1e7dd;
+        }
+
+
+        .table-card.oculta {
+            border: 2px dashed #adb5bd;
+            background-color: #e9ecef;
+            color: #6c757d;
+            opacity: 0.55;
+        }
+
+        .table-number {
+            font-weight: 800;
+            font-size: clamp(0.65rem, 2.3vw, 1rem);
+            line-height: 1;
+        }
+
+        .table-capacity {
+            font-size: clamp(0.5rem, 1.8vw, 0.75rem);
+            font-weight: 700;
+            margin-top: 1px;
+            line-height: 1;
+        }
+
+        .table-families {
+            font-size: clamp(0.42rem, 1.5vw, 0.6rem);
+            color: #495057;
+            max-width: 85%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 600;
+            line-height: 1.1;
+        }
+
+        .badge-capacity {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            font-size: clamp(0.42rem, 1.5vw, 0.65rem);
+            padding: 1px 4px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<header class="header-title text-center mb-2">
+    <h4 class="fw-bold mb-0 fs-6 fs-md-4">🦁 Gestão de Mesas & Acomodação 🦒</h4>
+    <p class="mb-0 text-warning fw-semibold" style="font-size: 0.7rem;">Safari do Dudu - 1 Ano</p>
+</header>
+
+<div class="container-fluid px-2" style="max-width: 950px;">
+
+    <!-- Alerta de falha na conexão -->
+    <div id="alertErroSupabase" class="alert alert-danger d-none shadow-sm p-2 mb-2 small" role="alert">
+        <i class="fas fa-exclamation-triangle me-1"></i>
+        <strong>Erro de Conexão:</strong> <span id="msgErroSupabase"></span>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="row g-1 mb-2">
+        <div class="col-3">
+            <div class="stat-card border-primary">
+                <div class="stat-label">Confirmados</div>
+                <div class="stat-number text-primary" id="lblTotalConfirmados">0</div>
+                <small class="text-muted d-block" style="font-size: 0.55rem;">No evento</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="stat-card border-success">
+                <div class="stat-label">Acomodados</div>
+                <div class="stat-number text-success" id="lblTotalAcomodados">0</div>
+                <small class="text-muted d-block" style="font-size: 0.55rem;">Com mesa</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="stat-card border-warning">
+                <div class="stat-label">Sem Mesa</div>
+                <div class="stat-number text-warning" id="lblSemMesa">0</div>
+                <small class="text-muted d-block" style="font-size: 0.55rem;">Falta acomodar</small>
+            </div>
+        </div>
+        <div class="col-3">
+            <div class="stat-card border-info">
+                <div class="stat-label">Lugares Salão</div>
+                <div class="stat-number text-info" id="lblCapacidadeTotal">0</div>
+                <small class="text-muted d-block" style="font-size: 0.55rem;">Capacidade</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Busca / Lista de Convidados no Dashboard -->
+    <div class="card bg-white shadow-sm border-0 mb-2 p-2">
+        <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-5">
+                <label class="form-label fw-bold mb-1 small"><i class="fas fa-users me-1"></i>Selecionar Convidado</label>
+            </div>
+            <div class="col-12 col-md-7">
+                <label class="form-label fw-bold mb-1 small">Lista de convidados</label>
+                <div class="d-flex gap-1">
+                    <select id="selectFiltroConvidadoDashboard" class="form-select form-select-sm" style="max-width:150px;" onchange="filtrarOpcoesConvidados()">
+                        <option value="todos">Todos</option>
+                        <option value="sem_mesa">⚠️ Sem Mesa</option>
+                        <option value="com_mesa">Mesa</option>
+                    </select>
+                    <select id="selectConvidadoDashboard" class="form-select form-select-sm">
+                        <option value="">-- Todos os Convidados --</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alerta de convidados sem mesa -->
+    <div id="alertConvidadosSemMesa" class="alert alert-warning shadow-sm p-2 mb-2 d-none" role="alert">
+        <div class="fw-bold small mb-1"><i class="fas fa-triangle-exclamation me-1"></i>Convidados ainda sem mesa:</div>
+        <div id="listaConvidadosSemMesa" class="small"></div>
+    </div>
+
+    <!-- Legenda -->
+    <div class="d-flex justify-content-center gap-2 mb-2 bg-white p-1 rounded-3 shadow-sm flex-wrap fw-semibold" style="font-size: 0.65rem;">
+        <div class="d-flex align-items-center gap-1"><span class="badge bg-warning text-dark">Amarela</span> Tem vaga</div>
+        <div class="d-flex align-items-center gap-1"><span class="badge bg-success">Verde</span> Completa</div>
+        <div class="d-flex align-items-center gap-1"><span class="badge bg-danger">Vermelha</span> Acima da capacidade</div>
+        <div class="d-flex align-items-center gap-1"><span class="badge bg-secondary">Oculta</span> Desativada</div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="map-container">
+        <div class="row g-1">
+            <div class="col-10">
+                <div class="area-kids">
+                    <i class="fas fa-gamepad me-1"></i> ÁREA KIDS / BRINQUEDÃO & TV
+                </div>
+                <!-- Forçado 4 colunas em qualquer tela -->
+                <div class="row row-cols-4 g-1 text-center mb-1" id="gridMesasPrincipais"></div>
+            </div>
+            <div class="col-2 d-flex px-0">
+                <div class="area-decoracao w-100">
+                    🎈 DECORAÇÃO & PAINEL DO BOLO
+                </div>
+            </div>
+        </div>
+
+        <div class="grade-divisoria">
+            <span><i class="fas fa-bars me-1"></i> GRADE DE PROTEÇÃO / ENTRADA</span>
+        </div>
+
+        <!-- Forçado 5 colunas em qualquer tela -->
+        <div class="row row-cols-5 g-1 text-center" id="gridMesasInferior"></div>
+    </div>
+
+</div>
+
+<!-- Modal Gerenciar Mesa -->
+<div class="modal fade" id="modalMesa" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white p-3">
+                <h5 class="modal-title fw-bold fs-6" id="modalTitulo">Gerenciar Mesa</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-3">
+                
+                <div class="row bg-light p-2 rounded-3 mb-3 align-items-center border g-2">
+                    <div class="col-12 col-md-5">
+                        <label class="form-label fw-bold mb-0 small">Capacidade da mesa (Cadeiras):</label>
+                        <div class="form-text mt-0" style="font-size: 0.7rem;">Escolha de 1 a 10 lugares.</div>
+                    </div>
+                    <div class="col-8 col-md-4 d-flex gap-1">
+                        <select id="selectCapacidadeMesa" class="form-select form-select-sm fw-bold">
+                            <option value="1">1 Lugar</option>
+                            <option value="2">2 Lugares</option>
+                            <option value="3">3 Lugares</option>
+                            <option value="4">4 Lugares</option>
+                            <option value="5">5 Lugares</option>
+                            <option value="6">6 Lugares</option>
+                            <option value="7">7 Lugares</option>
+                            <option value="8" selected>8 Lugares</option>
+                            <option value="9">9 Lugares</option>
+                            <option value="10">10 Lugares</option>
+                            <option value="11">11 Lugares</option>
+                            <option value="12">12 Lugares</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm fw-bold" onclick="salvarCapacidadeMesa()">Salvar</button>
+                    </div>
+                    <div class="col-4 col-md-3 text-end">
+                        <button id="btnOcultarMesa" class="btn btn-outline-secondary btn-sm w-100 fw-bold" onclick="alternarOcultarMesa()">
+                            <i class="fas fa-eye-slash me-1"></i> Ocultar
+                        </button>
+                    </div>
+                </div>
+
+                <h6 class="fw-bold border-bottom pb-1 small">Pessoas Acomodadas nesta Mesa:</h6>
+                <div id="listaPessoasMesa" class="mb-3"></div>
+
+                <div class="card card-body bg-light border-0 p-2">
+                    <h6 class="fw-bold text-success mb-2 small"><i class="fas fa-plus-circle me-1"></i> Adicionar Convidado/Família:</h6>
+                    <div class="row g-2">
+                        <div class="col-12 col-md-7">
+                            <select id="selectConvidadoParaAdicionar" class="form-select form-select-sm">
+                                <option value="">-- Selecione o Convidado --</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-3">
+                            <button class="btn btn-success btn-sm w-100 fw-bold" onclick="adicionarConvidadoNaMesa()">Acomodar</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="modal-footer p-2">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const SUPABASE_URL = "https://wtujaawfxmfqgvvwkjce.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_Tgu_ZkuqGcDdRxeisegrQQ_DU1-QKPx";
+    
+    let supabaseClient = null;
+    if (window.supabase) {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    }
+
+    const TOTAL_MESAS = 21;
+    let todosConvidados = [];
+    let capacidadeMesas = {};
+    let mesasOcultas = {};
+    let mesaAtualSelecionada = null;
+    let modalInstance = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+        modalInstance = new bootstrap.Modal(document.getElementById('modalMesa'));
+        
+        for(let i = 1; i <= TOTAL_MESAS; i++) {
+            capacidadeMesas[i] = 8;
+            mesasOcultas[i] = false;
+        }
+
+        await carregarDados();
+    });
+
+    function getNomeConvidado(c) {
+        return c.nome || c.text || "Convidado sem Nome";
+    }
+
+    async function carregarDados() {
+        const divErro = document.getElementById('alertErroSupabase');
+        const spanErro = document.getElementById('msgErroSupabase');
+        divErro.classList.add('d-none');
+
+        try {
+            if (!supabaseClient) {
+                throw new Error("O cliente Supabase não pôde ser carregado.");
+            }
+
+            const { data, error } = await supabaseClient
+                .from('confirmacoes')
+                .select('*');
+
+            if (error) throw error;
+            if (data) todosConvidados = data;
+        } catch (err) {
+            console.error("Erro no Supabase:", err);
+            divErro.classList.remove('d-none');
+            spanErro.innerText = err.message || JSON.stringify(err);
+        }
+
+        const capSalva = localStorage.getItem('capacidades_mesas');
+        if (capSalva) capacidadeMesas = { ...capacidadeMesas, ...JSON.parse(capSalva) };
+
+        const ocultasSalvas = localStorage.getItem('mesas_ocultas');
+        if (ocultasSalvas) mesasOcultas = { ...mesasOcultas, ...JSON.parse(ocultasSalvas) };
+
+        atualizarResumoDashboard();
+        renderizarMapa();
+        filtrarOpcoesConvidados();
+    }
+
+    function atualizarResumoDashboard() {
+        let totalConfirmados = 0;
+        let totalAcomodados = 0;
+        let semMesa = 0;
+        let capacidadeTotalSalao = 0;
+
+        for(let i = 1; i <= TOTAL_MESAS; i++) {
+            if (!mesasOcultas[i]) capacidadeTotalSalao += capacidadeMesas[i];
+        }
+
+        todosConvidados.forEach(c => {
+            const qtdPessoas = (parseInt(c.adultos) || 0) + (parseInt(c.criancas) || 0) || 1;
+            totalConfirmados += qtdPessoas;
+
+            if (c.mesa_numero) {
+                totalAcomodados += qtdPessoas;
+            } else {
+                semMesa += qtdPessoas;
+            }
+        });
+
+        document.getElementById('lblTotalConfirmados').innerText = totalConfirmados;
+        document.getElementById('lblTotalAcomodados').innerText = totalAcomodados;
+        document.getElementById('lblSemMesa').innerText = semMesa;
+        document.getElementById('lblCapacidadeTotal').innerText = capacidadeTotalSalao;
+
+        const alertSemMesa = document.getElementById('alertConvidadosSemMesa');
+        const listaSemMesa = document.getElementById('listaConvidadosSemMesa');
+        const convidadosSemMesa = todosConvidados.filter(c => !c.mesa_numero);
+        if (alertSemMesa && listaSemMesa) {
+            if (convidadosSemMesa.length > 0) {
+                listaSemMesa.innerHTML = convidadosSemMesa.map(c => {
+                    const qtd = (parseInt(c.adultos) || 0) + (parseInt(c.criancas) || 0) || 1;
+                    return `<span class="badge bg-light text-dark border me-1 mb-1">⚠️ ${getNomeConvidado(c)} <strong>(${qtd}p)</strong></span>`;
+                }).join('');
+                alertSemMesa.classList.remove('d-none');
+            } else {
+                listaSemMesa.innerHTML = '';
+                alertSemMesa.classList.add('d-none');
+            }
+        }
+    }
+
+    function renderizarMapa() {
+        const gridPrincipais = document.getElementById('gridMesasPrincipais');
+        const gridInferior = document.getElementById('gridMesasInferior');
+
+        gridPrincipais.innerHTML = '';
+        gridInferior.innerHTML = '';
+
+        for (let i = 1; i <= TOTAL_MESAS; i++) {
+            const convidadosDaMesa = todosConvidados.filter(c => parseInt(c.mesa_numero) === i);
+            
+            const totalPessoasNaMesa = convidadosDaMesa.reduce((acc, curr) => {
+                return acc + ((parseInt(curr.adultos) || 0) + (parseInt(curr.criancas) || 0) || 1);
+            }, 0);
+
+            const capMax = capacidadeMesas[i] || 8;
+            const isOculta = mesasOcultas[i] || false;
+
+            let statusClass = 'livre';
+            if (isOculta) {
+                statusClass = 'oculta';
+            } else if (totalPessoasNaMesa > capMax) {
+                statusClass = 'lotada';
+            } else if (totalPessoasNaMesa === capMax) {
+                statusClass = 'completa';
+            } else if (totalPessoasNaMesa >= 0) {
+                statusClass = 'parcial';
+            }
+
+            const nomesStr = convidadosDaMesa.map(c => getNomeConvidado(c).split(' ')[0]).join(', ');
+
+            const cardHtml = `
+                <div class="col px-0">
+                    <div class="table-card ${statusClass}" onclick="abrirModalMesa(${i})">
+                        <span class="badge bg-secondary badge-capacity">${isOculta ? 'Oculta' : capMax + ' lug'}</span>
+                        <span class="table-number">M${i}</span>
+                        <span class="table-capacity"><i class="fas fa-users me-1"></i>${totalPessoasNaMesa}/${capMax}</span>
+                        <span class="table-families">${totalPessoasNaMesa > capMax ? '⚠️ ACIMA DA CAPACIDADE' : totalPessoasNaMesa === capMax ? '✓ COMPLETA' : `⚠️ Vagas: ${Math.max(0, capMax - totalPessoasNaMesa)}`}</span>
+                    </div>
+                </div>
+            `;
+
+            if (i <= 16) {
+                gridPrincipais.innerHTML += cardHtml;
+            } else {
+                gridInferior.innerHTML += cardHtml;
+            }
+        }
+    }
+
+    function abrirModalMesa(numeroMesa) {
+        mesaAtualSelecionada = numeroMesa;
+        document.getElementById('modalTitulo').innerText = `Gerenciar Mesa ${numeroMesa}`;
+        document.getElementById('selectCapacidadeMesa').value = capacidadeMesas[numeroMesa] || 8;
+        
+        const btnOcultar = document.getElementById('btnOcultarMesa');
+        if (mesasOcultas[numeroMesa]) {
+            btnOcultar.className = "btn btn-secondary btn-sm w-100 fw-bold";
+            btnOcultar.innerHTML = `<i class="fas fa-eye me-1"></i> Reexibir`;
+        } else {
+            btnOcultar.className = "btn btn-outline-secondary btn-sm w-100 fw-bold";
+            btnOcultar.innerHTML = `<i class="fas fa-eye-slash me-1"></i> Ocultar`;
+        }
+
+        atualizarConteudoModalMesa();
+        modalInstance.show();
+    }
+
+    function atualizarConteudoModalMesa() {
+        const i = mesaAtualSelecionada;
+        const convidadosDaMesa = todosConvidados.filter(c => parseInt(c.mesa_numero) === i);
+        const listaDiv = document.getElementById('listaPessoasMesa');
+        
+        const totalPessoas = convidadosDaMesa.reduce((acc, curr) => acc + ((parseInt(curr.adultos) || 0) + (parseInt(curr.criancas) || 0) || 1), 0);
+        const capMax = capacidadeMesas[i] || 8;
+
+        if (convidadosDaMesa.length === 0) {
+            listaDiv.innerHTML = `<div class="alert alert-light text-center border mb-0 text-muted small p-2">Nenhum convidado acomodado nesta mesa ainda.</div>`;
+        } else {
+            let html = `<div class="list-group mb-2">`;
+            convidadosDaMesa.forEach(c => {
+                const totalGrupo = (parseInt(c.adultos) || 0) + (parseInt(c.criancas) || 0) || 1;
+                const nomeExibicao = getNomeConvidado(c);
+
+                html += `
+                    <div class="list-group-item d-flex justify-content-between align-items-center p-2">
+                        <div style="font-size: 0.8rem;">
+                            <strong>${nomeExibicao}</strong> 
+                            <span class="badge bg-info text-dark ms-1">${totalGrupo} p.</span>
+                            <div class="small text-muted" style="font-size: 0.7rem;">${c.adultos || 0} A | ${c.criancas || 0} C ${c.observacoes_mesa ? ' - ' + c.observacoes_mesa : ''}</div>
+                        </div>
+                        <button class="btn btn-outline-danger btn-sm p-1 px-2" onclick="desvincularConvidado('${c.id}')">
+                            <i class="fas fa-user-minus"></i>
+                        </button>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            html += `<div class="d-flex justify-content-between px-1 fw-bold text-secondary small" style="font-size: 0.75rem;">
+                        <span>Ocupação: ${totalPessoas}/${capMax}</span>
+                        <span>Vagas: ${Math.max(0, capMax - totalPessoas)}</span>
+                     </div>`;
+            listaDiv.innerHTML = html;
+        }
+
+        filtrarOpcoesConvidados();
+    }
+
+    function normalizarTexto(txt) {
+        return (txt || '').normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    }
+
+    function filtrarOpcoesConvidados() {
+        const campoBusca = document.getElementById('inputBuscarConvidado');
+        const termoBusca = normalizarTexto(campoBusca ? campoBusca.value : '');
+        const select = document.getElementById('selectConvidadoParaAdicionar');
+        const selectDashboard = document.getElementById('selectConvidadoDashboard');
+        const filtroDashboard = document.getElementById('selectFiltroConvidadoDashboard');
+        const filtro = filtroDashboard ? filtroDashboard.value : 'todos';
+
+        if (select) select.innerHTML = '<option value="">-- Selecione o Convidado --</option>';
+        if (selectDashboard) selectDashboard.innerHTML = '<option value="">-- Todos os Convidados --</option>';
+
+        const disponiveis = todosConvidados.filter(c => !c.mesa_numero);
+
+        todosConvidados.forEach(c => {
+            const nomeExibicao = getNomeConvidado(c);
+            const nomeNormalizado = normalizarTexto(nomeExibicao);
+            const atendeFiltro = filtro === 'todos' || (filtro === 'sem_mesa' && !c.mesa_numero) || (filtro === 'com_mesa' && !!c.mesa_numero);
+            if (atendeFiltro && (!termoBusca || nomeNormalizado.includes(termoBusca))) {
+                const totalGrupo = (parseInt(c.adultos) || 0) + (parseInt(c.criancas) || 0) || 1;
+                const statusMesa = c.mesa_numero ? `(Mesa ${c.mesa_numero})` : '⚠️ (Sem Mesa)';
+                if (selectDashboard) {
+                    const optionDash = document.createElement('option');
+                    optionDash.value = c.id;
+                    optionDash.textContent = `${nomeExibicao} - [${totalGrupo}p] ${statusMesa}`;
+                    selectDashboard.appendChild(optionDash);
+                }
+            }
+        });
+
+        disponiveis.forEach(c => {
+            const nomeExibicao = getNomeConvidado(c);
+            const nomeNormalizado = normalizarTexto(nomeExibicao);
+
+            {
+                const totalGrupo = (parseInt(c.adultos) || 0) + (parseInt(c.criancas) || 0) || 1;
+                const statusMesa = c.mesa_numero ? `(Mesa ${c.mesa_numero})` : '(Sem Mesa)';
+                
+                const option = document.createElement('option');
+                option.value = c.id;
+                option.textContent = `${nomeExibicao} - [${totalGrupo}p] ${statusMesa}`;
+                select.appendChild(option);
+            }
+        });
+    }
+
+    function salvarCapacidadeMesa() {
+        const novaCap = parseInt(document.getElementById('selectCapacidadeMesa').value);
+        capacidadeMesas[mesaAtualSelecionada] = novaCap;
+        localStorage.setItem('capacidades_mesas', JSON.stringify(capacidadeMesas));
+        
+        atualizarConteudoModalMesa();
+        atualizarResumoDashboard();
+        renderizarMapa();
+    }
+
+    function alternarOcultarMesa() {
+        const i = mesaAtualSelecionada;
+        mesasOcultas[i] = !mesasOcultas[i];
+        localStorage.setItem('mesas_ocultas', JSON.stringify(mesasOcultas));
+
+        abrirModalMesa(i);
+        atualizarResumoDashboard();
+        renderizarMapa();
+    }
+
+    async function adicionarConvidadoNaMesa() {
+        const convidadoId = document.getElementById('selectConvidadoParaAdicionar').value;
+        if (!convidadoId) {
+            alert('Selecione um convidado.');
+            return;
+        }
+
+        try {
+            const { error } = await supabaseClient
+                .from('confirmacoes')
+                .update({ mesa_numero: mesaAtualSelecionada })
+                .eq('id', convidadoId);
+
+            if (error) throw error;
+
+            await carregarDados();
+            atualizarConteudoModalMesa();
+        } catch (err) {
+            alert('Erro ao salvar no banco Supabase: ' + (err.message || JSON.stringify(err)));
+        }
+    }
+
+    async function desvincularConvidado(convidadoId) {
+        try {
+            const { error } = await supabaseClient
+                .from('confirmacoes')
+                .update({ mesa_numero: null })
+                .eq('id', convidadoId);
+
+            if (error) throw error;
+
+            await carregarDados();
+            atualizarConteudoModalMesa();
+        } catch (err) {
+            alert('Erro ao remover no Supabase: ' + (err.message || JSON.stringify(err)));
+        }
+    }
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
